@@ -14,9 +14,9 @@ type packet struct {
 // Reader implements channel's binding for io.Reader.
 type Reader struct {
 	Incoming <-chan interface{}
-	r     io.Reader
-	alive bool
-	mtx   sync.Mutex
+	r        io.Reader
+	closed   bool
+	mtx      sync.Mutex
 }
 
 // NewReader returns a new Reader which reads data from specified
@@ -31,7 +31,7 @@ type Reader struct {
 //     }
 //
 func NewReader(r io.Reader) (chr *Reader) {
-	chr = &Reader{r: r, alive: true}
+	chr = &Reader{r: r, closed: false}
 	ch := make(chan interface{})
 	chr.Incoming = ch
 	go chr.read(ch)
@@ -42,8 +42,15 @@ func NewReader(r io.Reader) (chr *Reader) {
 func (chr *Reader) Close() error {
 	chr.mtx.Lock()
 	defer chr.mtx.Unlock()
-	chr.alive = false
+	chr.closed = true
 	return nil
+}
+
+// isClosed returns false if reader has been closed.
+func (chr *Reader) isClosed() bool {
+	chr.mtx.Lock()
+	defer chr.mtx.Unlock()
+	return chr.closed
 }
 
 // read handles all the data read from the underlaying io.Reader
@@ -51,7 +58,7 @@ func (chr *Reader) Close() error {
 func (chr *Reader) read(ch chan interface{}) {
 	dec := gob.NewDecoder(chr.r)
 	for {
-		if !chr.alive {
+		if chr.isClosed() {
 			close(ch)
 			break
 		}
