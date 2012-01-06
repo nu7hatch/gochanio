@@ -64,6 +64,7 @@ func TestReaderAndWriterOverTheNetwork(t *testing.T) {
 
 	conn, _ := net.Dial("tcp", host)
 	w = NewWriter(conn, in)
+	wg.Wait()
 	in <- 1
 	x := <-out
 	val, ok := x.(int)
