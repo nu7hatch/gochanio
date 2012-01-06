@@ -49,7 +49,6 @@ func TestReaderAndWriterOverTheNetwork(t *testing.T) {
 		addr, _ := net.ResolveTCPAddr("tcp", host)
 		l, _ := net.ListenTCP("tcp", addr)
 		for {
-			var conn net.Conn
 			conn, err := l.Accept()
 			if err != nil {
 				break
