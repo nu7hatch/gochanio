@@ -13,7 +13,7 @@ type packet struct {
 
 // Reader implements channel's binding for io.Reader.
 type Reader struct {
-	Incoming <-chan interface{}
+	Incoming <-chan interface{} // Data read from io.Reader will be available via this channel
 	r        io.Reader
 	closed   bool
 	mtx      sync.Mutex
@@ -76,7 +76,7 @@ func (chr *Reader) read(ch chan interface{}) {
 
 // Writer implements channel's binding for io.Writer.
 type Writer struct {
-	Outgoing chan<- interface{}
+	Outgoing chan<- interface{} // Data sent to this channel will be written by io.Writer
 	ch       chan interface{}
 	w        io.Writer
 }
