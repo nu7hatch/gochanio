@@ -1,8 +1,8 @@
 package chanio
 
 import (
-	"io"
 	"encoding/gob"
+	"io"
 	"sync"
 )
 

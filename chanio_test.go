@@ -1,18 +1,18 @@
 package chanio
 
 import (
-	"testing"
 	"bytes"
 	"encoding/gob"
 	"net"
 	"sync"
+	"testing"
 )
 
 func TestReader(t *testing.T) {
 	buf := bytes.NewBuffer([]byte{})
 	enc := gob.NewEncoder(buf)
 	enc.Encode(packet{1})
-	ch := make(chan interface{})	
+	ch := make(chan interface{})
 	r := NewReader(buf, ch)
 	x := <-ch
 	val, ok := x.(int)
@@ -46,7 +46,7 @@ func TestReaderAndWriterOverTheNetwork(t *testing.T) {
 	var w *Writer
 	in, out := make(chan interface{}), make(chan interface{})
 	host := "127.0.0.1:5678"
-	
+
 	wg.Add(1)
 	go func() {
 		addr, _ := net.ResolveTCPAddr("tcp", host)
