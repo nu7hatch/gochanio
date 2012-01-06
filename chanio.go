@@ -13,7 +13,7 @@ type packet struct {
 
 // Reader implements channel's binding for io.Reader.
 type Reader struct {
-	ch    chan<- interface{}
+	Incoming <-chan interface{}
 	r     io.Reader
 	alive bool
 	mtx   sync.Mutex
@@ -25,14 +25,16 @@ type Reader struct {
 // Example:
 //
 //     conn := net.Dial("tcp", "host.com:8080")
-//     r := chanio.NewReader(conn, ch)
+//     r := chanio.NewReader(conn)
 //     for x := range r.Incoming {
 //         // do something with x
 //     }
 //
-func NewReader(r io.Reader, ch chan<- interface{}) (chr *Reader) {
-	chr = &Reader{ch: ch, r: r, alive: true}
-	go chr.read()
+func NewReader(r io.Reader) (chr *Reader) {
+	chr = &Reader{r: r, alive: true}
+	ch := make(chan interface{})
+	chr.Incoming = ch
+	go chr.read(ch)
 	return
 }
 
@@ -46,10 +48,11 @@ func (chr *Reader) Close() error {
 
 // read handles all the data read from the underlaying io.Reader
 // and passes it to the Incoming channel.
-func (chr *Reader) read() {
+func (chr *Reader) read(ch chan interface{}) {
 	dec := gob.NewDecoder(chr.r)
 	for {
 		if !chr.alive {
+			close(ch)
 			break
 		}
 		var e packet
@@ -60,15 +63,15 @@ func (chr *Reader) read() {
 			}
 			continue
 		}
-		chr.ch <- e.X
+		ch <- e.X
 	}
 }
 
 // Writer implements channel's binding for io.Writer.
 type Writer struct {
-	ch   <-chan interface{}
-	dead chan bool
-	w    io.Writer
+	Outgoing chan<- interface{}
+	ch       chan interface{}
+	w        io.Writer
 }
 
 // NewWriter returns a new Writer which takes data from the Outgoing
@@ -77,20 +80,20 @@ type Writer struct {
 // Example:
 //
 //     conn := net.Dial("tcp", "host.com:8080")
-//     r := chanio.NewReader(conn, ch)
-//     for x := range r.Incoming {
-//         // do something with x
-//     }
+//     w := chanio.NewWriter(conn)
+//     w.Outgoing <- "foo"
 //
-func NewWriter(w io.Writer, ch <-chan interface{}) (chw *Writer) {
-	chw = &Writer{ch: ch, dead: make(chan bool), w: w}
+func NewWriter(w io.Writer) (chw *Writer) {
+	chw = &Writer{w: w}
+	chw.ch = make(chan interface{})
+	chw.Outgoing = chw.ch
 	go chw.write()
 	return
 }
 
 // Close terminates reading loop and closes the Incoming channel.
 func (chw *Writer) Close() error {
-	chw.dead <- true
+	close(chw.ch)
 	return nil
 }
 
@@ -98,18 +101,13 @@ func (chw *Writer) Close() error {
 // and writes it to the io.Writer. 
 func (chw *Writer) write() {
 	enc := gob.NewEncoder(chw.w)
-	for {
-		select {
-		case <-chw.dead:
-			return
-		case x := <-chw.ch:
-			err := enc.Encode(&packet{x})
-			if err != nil {
-				if err == io.EOF {
-					return
-				}
-				continue
+	for x := range chw.ch {
+		err := enc.Encode(&packet{x})
+		if err != nil {
+			if err == io.EOF {
+				break
 			}
+			continue
 		}
 	}
 }
