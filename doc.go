@@ -1,4 +1,4 @@
-// Package chanio profides Reader and Writer bindings with
+// Package chanio provides Reader and Writer bindings with
 // go channels for io.Reader and io.Writer interfaces.
 //
 // Here's an example implementation of channels communication
