@@ -13,18 +13,17 @@ func TestReader(t *testing.T) {
 	enc := gob.NewEncoder(buf)
 	enc.Encode(packet{1})
 	r := NewReader(buf)
-	x := <-r.Incoming
+	x := <-r
 	val, ok := x.(int)
 	if !ok || val != 1 {
 		t.Errorf("Expected encoded value to be 1, given %s", val)
 	}
-	r.Close()
 }
 
 func TestWriter(t *testing.T) {
 	buf := bytes.NewBuffer([]byte{})
 	w := NewWriter(buf)
-	w.Outgoing <- 1
+	w <- 1
 	dec := gob.NewDecoder(buf)
 	var p packet
 	err := dec.Decode(&p)
@@ -35,38 +34,37 @@ func TestWriter(t *testing.T) {
 	if !ok || val != 1 {
 		t.Errorf("Expected decoded value to be 1, given %s", val)
 	}
-	w.Close()
+	close(w)
 }
 
 func TestReaderAndWriterOverTheNetwork(t *testing.T) {
 	var wg sync.WaitGroup
-	var r *Reader
-	var w *Writer
+	var r <-chan interface{}
+	var w chan<- interface{}
 	host := "127.0.0.1:5678"
 
+	addr, _ := net.ResolveTCPAddr("tcp", host)
+	l, _ := net.ListenTCP("tcp", addr)
 	wg.Add(1)
 	go func() {
-		addr, _ := net.ResolveTCPAddr("tcp", host)
-		l, _ := net.ListenTCP("tcp", addr)
-		for {
-			conn, err := l.Accept()
-			if err != nil {
-				break
-			}
-			r = NewReader(conn)
-			wg.Done()
+		conn, err := l.Accept()
+		if err != nil {
+			t.Errorf("Expected to accept connection, error: %v", err)
 		}
+		r = NewReader(conn)
+		wg.Done()
 	}()
 
 	conn, _ := net.Dial("tcp", host)
 	w = NewWriter(conn)
 	wg.Wait()
-	w.Outgoing <- 1
-	x := <-r.Incoming
+	println("ok")
+	w <- 1
+	x := <-r
 	val, ok := x.(int)
 	if !ok || val != 1 {
 		t.Errorf("Expected to pass 1 over the network, given %s", val)
 	}
-	w.Close()
-	r.Close()
+	close(w)
+	conn.Close()
 }
