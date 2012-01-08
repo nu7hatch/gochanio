@@ -58,7 +58,6 @@ func TestReaderAndWriterOverTheNetwork(t *testing.T) {
 	conn, _ := net.Dial("tcp", host)
 	w = NewWriter(conn)
 	wg.Wait()
-	println("ok")
 	w <- 1
 	x := <-r
 	val, ok := x.(int)
@@ -66,5 +65,8 @@ func TestReaderAndWriterOverTheNetwork(t *testing.T) {
 		t.Errorf("Expected to pass 1 over the network, given %s", val)
 	}
 	close(w)
-	conn.Close()
+	_, ok = <-r
+	if ok {
+		t.Errorf("Expected r to be closed")
+	}
 }
