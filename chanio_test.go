@@ -123,6 +123,7 @@ func TestExchangingMaps(t *testing.T) {
 }
 
 func TestExchangingStructs(t *testing.T) {
+	gob.Register(new(struct{A int}))
 	buf := bytes.NewBuffer([]byte{})
 	w := NewWriter(buf)
 	w <- &struct{A int}{1}
