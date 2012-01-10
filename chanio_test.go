@@ -107,6 +107,7 @@ func TestExchangingSlices(t *testing.T) {
 }
 
 func TestExchangingMaps(t *testing.T) {
+	gob.Register(map[string]int{})
 	buf := bytes.NewBuffer([]byte{})
 	w := NewWriter(buf)
 	w <- map[string]int{"foo": 1}
