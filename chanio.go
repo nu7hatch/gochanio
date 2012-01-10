@@ -25,6 +25,32 @@
 //     w := chanio.NewWriter(conn)
 //     w <- "Hello World!"
 //
+// The chanio package is using encoding/gob to encode and decode
+// data exchanged over the underlying buffers. If you want to send
+// a struct, map or value of a custom type, then you need to register
+// it in gob first. Example:
+//
+//     package main
+//
+//     import (
+//         "encoding/gob"
+//         "chanio"
+//         "net"
+//     )
+//
+//     type Cat struct {
+//         Name   string
+//         IsCute bool
+//     }
+// 
+//     func main() {
+//         gob.Register(&Cat{})
+//         conn, _ := net.Dial("tcp", "host.com:8080")
+//         w := chanio.NewWriter(conn)
+//         w <- &Cat{Name: "Tom", IsCute: false}
+//         conn.Close()
+//     }
+//
 package chanio
 
 import (
@@ -37,7 +63,7 @@ type packet struct {
 	X interface{}
 }
 
-// NewReader returns a new read-only channel which passes data
+// NewReader returns a new read-only channel which provides data
 // read from specified io.Reader.
 //
 // Example:
