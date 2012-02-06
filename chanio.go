@@ -87,11 +87,9 @@ func read(r io.Reader, ch chan interface{}) {
 	dec := gob.NewDecoder(r)
 	for {
 		var e packet
-		err := dec.Decode(&e)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
+		if err := dec.Decode(&e); err == io.EOF {
+			break
+		} else if err != nil {
 			continue
 		}
 		ch <- e.X
@@ -116,16 +114,14 @@ func NewWriter(w io.Writer) chan<- interface{} {
 // write handles all the data received from specified channel
 // and writes it to the io.Writer. 
 func write(w io.Writer, ch chan interface{}) {
-	enc := gob.NewEncoder(w)
-	for x := range ch {
-		err := enc.Encode(&packet{x})
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			continue
-		}
-	}
+    enc := gob.NewEncoder(w)
+    for x := range ch {
+        if err := enc.Encode(&packet{x}); err == io.EOF {
+            break
+		} else if err != nil {
+            continue
+        }
+    }
 	if wc, ok := w.(io.WriteCloser); ok {
 		wc.Close()
 	}
